@@ -1,0 +1,118 @@
+---
+title: "analysis3fitting"
+output: html_document
+---
+
+
+## Load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(here)
+library(modelr)
+library(tidymodels)
+```
+
+
+Add code that does the following operations:
+
+Loads cleaned data.
+Fits a linear model to the continuous outcome using only the main predictor of interest.
+Fits another linear model to the continuous outcome using all (important) predictors of interest.
+Compares the model results for the model with just the main predictor and all predictors.
+Fits a logistic model to the categorical outcome using only the main predictor of interest.
+Fits another logistic model to the categorical outcome using all (important) predictors of interest.
+Compares the model results for the categorical model with just the main predictor and all predictors.
+
+Load cleaned data
+```{r}
+data_location <- here::here("data","processed_data","processed_data.rds")
+data <- readRDS(data_location)
+```
+
+
+## Fits a linear model to the continuous outcome (Body temperature) using only the main predictor of interest (Runny nose).
+
+
+1. Linear regression of Nausea and Body Temperature as an ANOVA because of the variables are categorical and continuous, respectively.
+2. Training/estimating the linear model
+```{r}
+#1
+lm_mod <- linear_reg() %>% set_engine("lm")
+
+#2
+lm_fit <- 
+  lm_mod %>% 
+  fit(BodyTemp ~ RunnyNose, data = data)
+bodytemp_lm <- tidy(lm_fit)
+
+```
+
+
+## Fits another linear model to the continuous outcome using all (important) predictors of interest.
+
+```{r}
+
+lm_fit2 <- lm_mod %>% fit(BodyTemp ~ ., data = data)
+important_predictors_lm <- tidy(lm_fit2)
+
+```
+
+## Compare Body Temperature (the main predictor) with all other predictors using an ANOVA.
+```{r}
+lm_compare <- anova(lm_fit$fit, lm_fit2$fit, test = "Chisq")
+lm_compare_table <- tidy(lm_compare)
+lm_compare_table
+```
+
+Looking at this comparison, we can see that we want to go with the lm_fit2 which looks at all predictors.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Now let's do the same thing, but with Nausea instead of body temperature
+
+Set up logistical model to categorical:
+```{r}
+
+logistical_model <- logistic_mod <- logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+
+```
+
+##Fits another linear model to the categorical outcome using all (important) predictors of interest.
+
+```{r}
+
+log_fit <- logistical_model %>% fit(Nausea ~ RunnyNose, data = data)
+nausea_lm <- tidy(log_fit)
+nausea_lm
+
+```
+
+## Compare Nausea (the main predictor) with all other predictors using an ANOVA.
+```{r}
+
+log_fit2 <- logistical_model %>%
+  fit(Nausea ~ ., data = data)
+
+
+
+log_compare <- anova(log_fit$fit, log_fit2$fit, test = "Chisq")
+log_compare_table <- tidy(log_compare)
+log_compare_table
+```
+Looking at the ANOVA results, we can see that we want to go with the log_fit2 which looks at all predictors.
+
+
+## Saving our results:
+```{r}
+saveRDS(lm_compare_table, file = here("results", "linearmodeltable.rds"))
+saveRDS(log_compare_table, file = here("results", "logisticmodeltable.rds"))
+
+```
+
+
+
+
+

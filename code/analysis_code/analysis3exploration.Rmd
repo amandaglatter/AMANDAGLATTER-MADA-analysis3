@@ -1,0 +1,97 @@
+---
+title: "analysis3exploration"
+output: html_document
+---
+
+
+#Load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(ggplot2)
+```
+
+#Locate file
+```{r}
+data_location <- here::here("data","processed_data","processed_data.rds")
+data <- readRDS(data_location)
+```
+
+Main continuous outcome: Body temperature (BodyTemp)
+Main categorical outcome: Nausea
+I am going to arbitrarily select other columns that may predict these outcomes.
+Fatigue
+SubjectiveFever
+Pharyngitis
+CoughYN (categorical)
+SwollenLymphNodes
+
+For each (important) variable, produce and print some numerical output (e.g. a table or some summary statistics numbers). Also, create a histogram or density plot.
+or d
+Important continuous variable: Body Temperature
+```{r}
+
+BodyTemp_table <- broom::tidy(summary(data$BodyTemp))
+
+print(BodyTemp_table)
+
+ggplot(data, aes(x=BodyTemp)) + geom_histogram() + ggtitle('Body Temperature Frequency Reports')
+
+```
+Looking at the histogram, Body Temperatures skews left, the mean looks to be around 99 degrees.
+
+
+Important categorical variable: Nausea
+```{r}
+Nausea_table <- broom::tidy(summary(data$Nausea))
+
+Nausea_table
+
+ggplot(data, aes(x=Nausea)) + geom_bar() + ggtitle("Nausea Prevalence")
+
+```
+Boxplots for temperature and nausea reports
+
+```{r}
+
+data %>% ggplot(aes(x=Nausea, y=BodyTemp)) + geom_boxplot() +
+  ggtitle("Nausea vs. Body Temperature")
+
+
+```
+Now I will pick a couple predictor values (I am picking these arbitrarily) and compare them to our main outcomes of interest. All of these are categorical.
+
+* SubjectiveFever
+* Vomit
+* ChillsSweats
+* Myalgia
+
+
+
+
+
+
+
+Body temperature and Subjective fever
+```{r}
+
+data %>% ggplot(aes(x=SubjectiveFever, y=BodyTemp)) + geom_boxplot() +
+  ggtitle("Body Temperature vs Subjective Fever)
+
+```
+Body temperature and Vomit
+```{r}
+
+data %>% ggplot(aes(x=Vomit, y=BodyTemp)) + geom_boxplot() + ggtitle("Body Temperatures and Vomit as Symptoms")
+
+```
+
+Body temperature and Chills/Sweats
+```{r}
+
+data %>% ggplot(aes(x=ChillsSweats, y=BodyTemp)) + geom_boxplot() +
+  ggtitle("Body Temperature vs Chills/Sweats")
+
+```
+
