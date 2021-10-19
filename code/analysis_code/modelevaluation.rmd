@@ -14,7 +14,7 @@ library(rsample) #for training and testing
 library(tidymodels) #for modeling and recipes
 ```
 
-#Locate file and download data
+Locate file and download data
 ```{r}
 data_location <- here::here("data","processed_data","processed_data.rds")
 dat <- readRDS(data_location)
@@ -22,10 +22,15 @@ dat <- readRDS(data_location)
 
 
 "Write code that takes the data and splits it randomly into a _train and test_ that, following for instance the example in the Data Splitting section of the Get Started tidymodels tutorial."
+
 * Training set is used to fit the model
+
 * Testing set is used for evaluation
+
 * Use rsample package ot create an object that tells how to split the data
+
 * use rsample to then create dataframes for training and testing sets
+
 
 ```{r}
 #Fic the random numbers by setting the seed, allowing the analysis to be reproducible when random numbers are used.
@@ -73,7 +78,7 @@ nausea_wflow
 In a single fucntion, we can prepare the recipe and train the model from the resulting predictors:
 ```{r}
 nausea_fit <- nausea_wflow %>%
-  fit(data=dat)
+  fit(data=train_data)
 
 #the following extracts the finalized recipe and fitted model objects inside.
 nausea_fit %>% extract_fit_parsnip() %>%
@@ -88,20 +93,59 @@ Now we are using the trained workflow to predict with the unseen test data. For 
 predict(nausea_fit, test_data)
 
 ```
+
 The output from predict() returns Yes or No. To get back predicted class probabilities, we can specify "type = "prob"" when we use predict() or augment().
 ```{r}
-nausea_aug <- augment(nausea_fit, dat)
+nausea_aug_train <- augment(nausea_fit, train_data)
 #This produces a tibble with predicted class probabilities.
+
+nausea_aug_train %>% select(Nausea, .pred_Yes, .pred_No)
 ```
+
+_Plotting_
 Now we use the area under the ROC curve as our metric, computed using roc_curve() and roc_auc() from yardstick package.
 ROC helps determine what probability cutoff should be used.Commonly, the area under the ROC curve (AUC) is used to evaluate models. If the best model immediately proceeds to the upper left corner, the area under this curve would be one while the poor model would produce an AUC in the neighborhood of 0.50. 
+Then, calculate the area under the ROC curve (AUC).
 
 ```{r}
-nausea_aug %>% roc_curve(truth = Nausea, .pred_Yes) %>% autoplot()
+nausea_roc_train <- nausea_aug_train %>% roc_curve(truth = Nausea, .pred_Yes, event_level = "second") %>% autoplot() #**Why is event level second?
+nausea_roc_train
+
+nausea_auc_train <- nausea_aug_train %>% roc_auc(truth = Nausea, .pred_Yes, event_level = "second")
+nausea_auc_train
+
+```
+The estimate of 0.797 indicates that this could be a useful model and it is about the same as the training data results.
+
+
+
+Now test with the _test data_.
+Determine predictions.
+```{r}
+nausea_aug_test <- augment(nausea_fit, test_data)
+#This produces a tibble with predicted class probabilities.
+
+nausea_aug_test %>% select(Nausea, .pred_Yes, .pred_No)
 ```
 
-This is pretty low and indicates it may not be useful.
+_Plotting_
+Plot the test data using the model.
+Then, calculate the area under the ROC curve (AUC).
+
+```{r}
+nausea_roc_test <- nausea_aug_test %>% roc_curve(truth = Nausea, .pred_Yes, event_level = "second") %>% autoplot() #**Why is event level second?
+nausea_roc_test
+
+nausea_auc_test <- nausea_aug_test %>% roc_auc(truth = Nausea, .pred_Yes, event_level = "second")
+nausea_auc_test
+
+```
+The area under the curve is about 0.686, so the model might be useful. _Should this number be closer to that of the training data??_
+
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 Let’s re-do the fitting but now with a model that only fits the main predictor to the categorical outcome.
 
 ```{r}
@@ -130,7 +174,7 @@ nausea_nose_wflow
 In a single function, we can prepare the recipe and train the model from the resulting predictors:
 ```{r}
 nausea_nose_fit <- nausea_nose_wflow %>%
-  fit(data=dat)
+  fit(data=train_data)
 
 #the following extracts the finalized recipe and fitted model objects inside.
 nausea_nose_fit %>% extract_fit_parsnip() %>%
@@ -147,14 +191,58 @@ predict(nausea_nose_fit, test_data)
 ```
 The output from predict() returns Yes or No. To get back predicted class probabilities, we can specify "type = "prob"" when we use predict() or augment().
 ```{r}
-nausea_nose_aug <- augment(nausea_nose_fit, dat)
+nausea_nose_aug_train <- augment(nausea_nose_fit, train_data, type = "prob")
+
+nausea_nose_aug_train
 #This produces a tibble with predicted class probabilities.
 ```
 Now we use the area under the ROC curve as our metric, computed using roc_curve() and roc_auc() from yardstick package.
 ROC helps determine what probability cutoff should be used.Commonly, the area under the ROC curve (AUC) is used to evaluate models. If the best model immediately proceeds to the upper left corner, the area under this curve would be one while the poor model would produce an AUC in the neighborhood of 0.50. 
 
 ```{r}
-nausea_nose_aug %>% roc_curve(truth = Nausea, .pred_Yes) %>% autoplot()
+nausea_nose_roc_train <- nausea_nose_aug_train %>% roc_curve(truth = Nausea, .pred_Yes, event_level = "second") %>% autoplot()
+
+nausea_nose_roc_train
+
 ```
 This is almost perfectly 0.5. This means the model is no good.
 
+Calculating the area under the curve:
+```{r}
+
+nausea_nose_auc_train <- nausea_nose_aug_train %>% roc_auc(truth = Nausea, .pred_Yes, event_level = "second")
+
+nausea_nose_auc_train
+
+```
+The value of 0.501 reinforces this: the model is no good.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+Now let's use the _test data_!
+
+First we predict the probabilities
+```{r}
+predict(nausea_nose_fit, test_data, type = "prob")
+
+```
+
+Now we use augment to turn this into a data frame.
+```{r}
+
+nausea_nose_aug_test <- augment(nausea_nose_fit, test_data)
+nausea_nose_aug_test %>% select(Nausea, .pred_Yes, .pred_No)
+
+```
+
+Plot as ROC, then calculate the AUC (area under curve)
+```{r}
+nausea_nose_roc_test <- nausea_nose_aug_test %>% roc_curve(truth = Nausea, .pred_Yes, event_level = "second") %>% autoplot()
+
+nausea_nose_roc_test
+
+nausea_nose_auc_test <- nausea_nose_aug_test %>% roc_auc(truth = Nausea, .pred_Yes, event_level = "second")
+
+nausea_nose_auc_test
+```
+
+The area under the curve is 0.48, which is pretty close to the trained value. Still, this is not a good model.
