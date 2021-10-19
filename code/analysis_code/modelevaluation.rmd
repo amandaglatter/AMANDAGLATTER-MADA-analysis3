@@ -1,0 +1,160 @@
+---
+title: "analysis3week9"
+output: html_document
+---
+This file uses the data wrangled data from_____.
+
+#Load libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+library(broom)
+library(ggplot2)
+library(rsample) #for training and testing
+library(tidymodels) #for modeling and recipes
+```
+
+#Locate file and download data
+```{r}
+data_location <- here::here("data","processed_data","processed_data.rds")
+dat <- readRDS(data_location)
+```
+
+
+"Write code that takes the data and splits it randomly into a _train and test_ that, following for instance the example in the Data Splitting section of the Get Started tidymodels tutorial."
+* Training set is used to fit the model
+* Testing set is used for evaluation
+* Use rsample package ot create an object that tells how to split the data
+* use rsample to then create dataframes for training and testing sets
+
+```{r}
+#Fic the random numbers by setting the seed, allowing the analysis to be reproducible when random numbers are used.
+#We can pick any random number (?)
+set.seed(48)
+
+#Put 3/4 data into the training set
+data_split <- initial_split(dat, prop =3/4)
+
+#Create data frames for the two sets:
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+```
+
+Congratulations! We have created our training and testing data sets.
+
+We are focusing on our _categorical outcome of interest_, which was _nausea_.We are fitting this outcome to all predictors, starting with categorical.
+
+_Creating a Recipe._
+A recipe is a description of the steps to be applied to a data set in order to prepare it for analysis.
+https://recipes.tidymodels.org/reference/recipe.html
+```{r}
+data_recipe <- recipe(Nausea ~ ., data = train_data) #First part is the formula: Nausea is the outcome of interest and to the right of tilde are predictors (a period indicates all other variables). Second part is the data used in the model (usually training set)
+
+```
+
+Set a model. Set a logistical model to a categorical outcome.
+```{r}
+log_mod <- logistic_reg() %>% 
+  set_engine("glm") %>% 
+  set_mode("classification")
+
+```
+
+Now we want to process the recipe using the training set, apply the recipe to the training set, and apply the recipe to the test set. To simplify the process, we use _workflows package_ from tinymodels.
+
+```{r}
+nausea_wflow <- workflow() %>%
+  add_model(log_mod) %>%
+  add_recipe(data_recipe)
+
+nausea_wflow
+```
+In a single fucntion, we can prepare the recipe and train the model from the resulting predictors:
+```{r}
+nausea_fit <- nausea_wflow %>%
+  fit(data=dat)
+
+#the following extracts the finalized recipe and fitted model objects inside.
+nausea_fit %>% extract_fit_parsnip() %>%
+  tidy()
+
+
+```
+
+Now we are using the trained workflow to predict with the unseen test data. For this, we use the single call "predict()".
+
+```{r}
+predict(nausea_fit, test_data)
+
+```
+The output from predict() returns Yes or No. To get back predicted class probabilities, we can specify "type = "prob"" when we use predict() or augment().
+```{r}
+nausea_aug <- augment(nausea_fit, dat)
+#This produces a tibble with predicted class probabilities.
+```
+Now we use the area under the ROC curve as our metric, computed using roc_curve() and roc_auc() from yardstick package.
+ROC helps determine what probability cutoff should be used.Commonly, the area under the ROC curve (AUC) is used to evaluate models. If the best model immediately proceeds to the upper left corner, the area under this curve would be one while the poor model would produce an AUC in the neighborhood of 0.50. 
+
+```{r}
+nausea_aug %>% roc_curve(truth = Nausea, .pred_Yes) %>% autoplot()
+```
+
+This is pretty low and indicates it may not be useful.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Let’s re-do the fitting but now with a model that only fits the main predictor to the categorical outcome.
+
+```{r}
+data_recipe_nose <- recipe(Nausea ~ RunnyNose, data = train_data) 
+```
+
+Set a model again. Set a logistical model to a categorical outcome.
+
+```{r}
+log_mod_nose <- logistic_reg() %>% 
+  set_engine("glm") %>% 
+  set_mode("classification")
+
+```
+
+Now we want to process the recipe using the training set, apply the recipe to the training set, and apply the recipe to the test set. To simplify the process, we use _workflows package_ from tinymodels.
+
+```{r}
+nausea_nose_wflow <- workflow() %>%
+  add_model(log_mod_nose) %>%
+  add_recipe(data_recipe_nose)
+
+nausea_nose_wflow
+```
+
+In a single function, we can prepare the recipe and train the model from the resulting predictors:
+```{r}
+nausea_nose_fit <- nausea_nose_wflow %>%
+  fit(data=dat)
+
+#the following extracts the finalized recipe and fitted model objects inside.
+nausea_nose_fit %>% extract_fit_parsnip() %>%
+  tidy()
+
+
+```
+
+Now we are using the trained workflow to predict with the unseen test data. For this, we use the single call "predict()".
+
+```{r}
+predict(nausea_nose_fit, test_data)
+
+```
+The output from predict() returns Yes or No. To get back predicted class probabilities, we can specify "type = "prob"" when we use predict() or augment().
+```{r}
+nausea_nose_aug <- augment(nausea_nose_fit, dat)
+#This produces a tibble with predicted class probabilities.
+```
+Now we use the area under the ROC curve as our metric, computed using roc_curve() and roc_auc() from yardstick package.
+ROC helps determine what probability cutoff should be used.Commonly, the area under the ROC curve (AUC) is used to evaluate models. If the best model immediately proceeds to the upper left corner, the area under this curve would be one while the poor model would produce an AUC in the neighborhood of 0.50. 
+
+```{r}
+nausea_nose_aug %>% roc_curve(truth = Nausea, .pred_Yes) %>% autoplot()
+```
+This is almost perfectly 0.5. This means the model is no good.
+
