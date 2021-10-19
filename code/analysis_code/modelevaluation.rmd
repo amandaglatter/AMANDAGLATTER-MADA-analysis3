@@ -339,8 +339,7 @@ rmse_runny_test
 ```
 
 
-###Conclusion
-
-
+###Conclusion (this might take some tweaking)
+The RMSE for the training and test sets were similar (both between 1.1-1.2) for both the complex and simple models. Due these metrics, we conclude that the model is peforming well.
 
 
