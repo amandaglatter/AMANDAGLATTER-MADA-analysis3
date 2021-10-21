@@ -246,3 +246,183 @@ nausea_nose_auc_test
 ```
 
 The area under the curve is 0.48, which is pretty close to the trained value. Still, this is not a good model.
+
+
+
+
+#Nicholas' Code Starts Here
+
+```{r}
+# Creates a simple recipe that fits our continuous outcome of interest to all predictors 
+bodytmp_rec <- 
+  recipe(BodyTemp ~ ., data = train_data)
+
+# Set a model as we did in the previous exercise
+lr_mod <- 
+  linear_reg() %>% 
+  set_engine("lm")
+
+
+# Use the workflow() package to create a
+# simple workflow that fits a linear model
+# to all predictors using the glm function
+bodytmp_wflow <- 
+  workflow() %>% 
+  add_model(lr_mod) %>% 
+  add_recipe(bodytmp_rec)
+
+# Fitting the model
+bodytmp_fit <- 
+  bodytmp_wflow %>% 
+  fit(data = train_data)
+
+# Extracting Model/Recipes with Parsnip
+bodytmp_fit %>% 
+  extract_fit_parsnip() %>% 
+  tidy()
+```
+
+
+
+```{r}
+
+# Obtaining Predictions
+predict(bodytmp_fit, train_data)
+
+bodytmp_aug <- 
+  augment(bodytmp_fit, train_data)
+
+bodytmp_aug %>%
+  select(BodyTemp)
+
+
+```
+
+##Calculating RMSE for Complex Model on Training Data
+```{r}
+# Calculating Root RMSE 
+rmse_train <- bodytmp_aug %>% 
+  rmse(truth = BodyTemp, .pred)
+
+rmse_train
+```
+
+
+```{r}
+
+# Now on Test Data
+
+
+# Obtaining Predictions
+predict(bodytmp_fit, test_data)
+
+bodytmp_aug <- 
+  augment(bodytmp_fit, test_data)
+
+bodytmp_aug %>%
+  select(BodyTemp)
+
+```
+
+
+
+##Calculating RMSE for Complex Model on Test Data
+```{r}
+# Calculating Root RMSE 
+rmse_test <- bodytmp_aug %>% 
+  rmse(truth = BodyTemp, .pred)
+
+rmse_test 
+
+```
+
+
+###NOW WITH ONLY ONE PREDICTOR
+
+```{r}
+
+# Creates a simple recipe that fits our categorical outcome of interest to all predictors 
+bodytmp_runny_rec <- 
+  recipe(BodyTemp ~ RunnyNose, data = train_data) 
+
+
+# Set a model as we did in the previous exercise
+lr_mod <- 
+  linear_reg() %>% 
+  set_engine("lm")
+
+
+# Use the workflow() package to create a
+# simple workflow that fits a linear model
+# to all predictors using the glm function
+bodytmp_runny_wflow <- 
+  workflow() %>% 
+  add_model(lr_mod) %>% 
+  add_recipe(bodytmp_runny_rec)
+
+# Fitting the model
+bodytmp_runny_fit <- 
+  bodytmp_runny_wflow %>% 
+  fit(data = train_data)
+
+# Extracting Model/Recipes with Parsnip
+bodytmp_runny_fit %>% 
+  extract_fit_parsnip() %>% 
+  tidy()
+
+```
+
+
+```{r}
+# For Training Data
+
+# Obtaining Predictions
+predict(bodytmp_runny_fit, train_data)
+
+bodytmp_runny_aug <- 
+  augment(bodytmp_runny_fit, train_data)
+
+bodytmp_runny_aug %>%
+  select(BodyTemp)
+
+```
+
+
+##Calculating RMSE for Simple Model from Training Data
+```{r}
+# Calculating Root RMSE 
+rmse_runny_train <- bodytmp_runny_aug %>% 
+  rmse(truth = BodyTemp, .pred)
+
+rmse_runny_train
+```
+
+```{r}
+
+# For Test Data
+
+# Obtaining Predictions
+predict(bodytmp_runny_fit, test_data)
+
+bodytmp_runny_aug <- 
+  augment(bodytmp_runny_fit, test_data)
+
+bodytmp_runny_aug %>%
+  select(BodyTemp)
+```
+
+
+##Calculating RMSE for Simple Model from Test Data
+```{r}
+
+# Calculating Root RMSE 
+rmse_runny_test <- bodytmp_runny_aug %>% 
+  rmse(truth = BodyTemp, .pred)
+
+rmse_runny_test
+
+```
+
+
+###Conclusion
+The RMSE for the complex model on the training data was 1.14 and the RMSE for the complex model on the test data was 1.06. The RMSE for the simple model on the training data was 1.24 and the RMSE for the simple model on the test data was 1.03.  Based on the RMSE values, I would conlcude that the complex model does a better job becuase the RMSE is closer in value between the training and test models and overall lower in the complex model compared with the simple model. 
