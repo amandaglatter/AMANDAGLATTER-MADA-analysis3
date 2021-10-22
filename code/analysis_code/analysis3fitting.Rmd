@@ -74,7 +74,7 @@ Looking at this comparison, we can see that we want to go with the lm_fit2 which
 Set up logistical model to categorical:
 ```{r}
 
-logistical_model <- logistic_mod <- logistic_reg() %>%
+logistical_model <- logistic_reg() %>%
   set_engine("glm") %>%
   set_mode("classification")
 
